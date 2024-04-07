@@ -1,0 +1,327 @@
+---
+title: "CarSalesProj"
+author: "Rahul"
+date: "2023-04-26"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+<br><h4><center> **LIBRARIES NEEDED FOR THE PROJECT**</center> </h4>
+```{r, message=FALSE}
+library(ggplot2)
+library(tidyverse)
+library(dplyr)
+library(tigerstats)
+library(MASS)
+library(cowplot)
+library(MLmetrics)
+library(reticulate)
+library(scales)
+
+```
+
+<br><h4><center>**UPLOADNG CSV**</center></h4>
+```{r}
+CarSalesData = read.csv("/Users/rahul/Downloads/Car_Dataset/car_details.csv") 
+```
+
+<br><h4><center>**DATA PREPERATION**</center></h4>
+```{r}
+dim(CarSalesData)
+```
+><h5> The Dataset CarSales contains 8128 observations and 12 features. </h5>
+
+```{r}
+str(CarSalesData)
+```
+><h5> The Dataset CarSalesData contains:-<br>
+<br> 1) Four "Integer" Data types 
+<br> 2) Eight "Character" Data Types. </h5>
+
+> We can see that in the mileage, max power and engine attributes, the data stored is unnecessarily stored in the form of characters while might not let us study the trends in the engine capacities and mileages. So lets convert them into integer types.
+
+```{python,}
+import pandas as pd
+
+df = pd.read_csv('/Users/rahul/Downloads/Car_Dataset/car_details.csv')
+
+df['mileage_numeric'] = 0
+
+for i, row in df.iterrows():
+    if 'kmpl' in str(row['mileage']):
+        df.at[i, 'mileage_numeric'] = float(str(row['mileage']).replace('kmpl', ''))
+    elif 'km/kg' in str(row['mileage']):
+        df.at[i, 'mileage_numeric'] = float(str(row['mileage']).replace('km/kg', ''))
+
+df = df.drop('mileage', axis=1)
+df = df.rename(columns={'mileage_numeric': 'mileage'})
+
+df.to_csv('car_sales_updated_.csv', index=False)
+
+```
+> This will convert the mileage column from char to int.
+
+```{python}
+import pandas as pd
+df = pd.read_csv("/Users/rahul/Downloads/Car_Dataset/car_sales_updated_.csv")
+df["engine"] = df["engine"].str.replace("CC", "").astype(float)
+df.to_csv("car_sales_data_.csv", index=False)
+```
+> This will convert the engine column from char to int.
+
+```{python}
+import pandas as pd
+df = pd.read_csv("/Users/rahul/Downloads/Car_Dataset/car_sales_data_.csv")
+df["max_power"] = df["max_power"].str.replace("bhp", "")
+df["max_power"] = df["max_power"].replace("", pd.NA)
+df["max_power"] = df["max_power"].fillna(0).astype(float)
+df.to_csv("CarDetails.csv", index=False)
+```
+> This will convert the max_power column from char to int.
+
+><h5> Now we are ready to process further with our dataset </h5>
+
+
+```{r}
+CarSales = read.csv("/Users/rahul/Downloads/Car_Dataset/CarDetails.csv") 
+```
+
+
+```{r}
+dim(CarSales)
+```
+```{r}
+str(CarSales)
+```
+><h5> Now the Dataset CarSales contains:-<br>
+<br> 1) Seven "Integer" or "Number" Data types 
+<br> 2) Five "Character" Data Types. </h5>
+
+```{r}
+
+summary(CarSales)
+```
+><h5> This gives the summary of the CarSales Dataset. </h5>
+
+<br><h4>**Understanding the Attributes**</h4>
+
+   1 - Car Brand Name<br>
+   2 - Year of Manufacture<br>
+   3 - Selling Price<br>
+   4 - Km Driven<br>
+   5 - Fuel type : Diesel, Petrol, LPG or CNG<br>
+   6 - Seller type : Individual or a Dealer<br>
+   7 - Transmission : Manual or Automatic <br>
+   8 - Owner : Is it the first, second or third owner <br>
+   9 - Engine Capacity in CC <br>
+   10 - Max Power in bhp<br>
+   11 - Number of Seats in the car<br>
+   12 - Mileage : in kmpl for petrol and diesel adn in km/kg for LPG and CNG<br>
+   
+```{r}
+head(CarSales)
+```
+><h5> This gives the First Six roxs of the CarSales Dataset. </h5>
+   
+
+```{r}
+names(CarSales)
+```
+```{r}
+sum(is.na(CarSales$engine))
+```
+>We see that we have 221 rows with null values in engine and other attributes 
+
+```{r}
+CarSales = CarSales[complete.cases(CarSales), ]
+```
+
+```{r}
+dim(CarSales)
+```
+>Rechecking the null values
+
+```{r}
+sum(is.na(CarSales))
+```
+>Now we have 0 null values in the dataset 
+
+> Checking for any duplicate values in the dataset
+
+```{r}
+sum(duplicated(CarSales))
+```
+>We can use unique function to remove the duplicated rows
+
+```{r}
+CarSales = unique(CarSales)
+```
+
+> Rechecking the dimension of the datset and if any duplicated values
+
+```{r}
+dim(CarSales)
+sum(duplicated(CarSales))
+```
+><h5>Finally after all the data preprocessing by datatype tranformations and data cleaning, Our dataset is ready to proceed with EDA<h5>
+
+<br><h4><center>**EXPLORATORY DATA ANALYSIS**</center></h4>
+
+<br><h4>**Histogram Plot of  Selling Price by Owner type**</h4>
+
+```{r}
+h = ggplot(data = CarSales, aes(x = selling_price)) +
+  geom_histogram(aes(fill = owner), bins = 10, color = "black", show.legend = TRUE, position = "fill") +
+  scale_x_continuous(labels = comma_format(prefix = "\u20B9", scale = 1e-6, suffix = "M")) +
+  scale_color_manual(values = c("darkred", "darkblue", "yellow", "green", "purple")) +
+  scale_fill_manual(values = c("darkred", "darkblue", "yellow", "green", "purple")) +labs(title = "Selling Price and Count by Ownership Type") + theme(plot.title = element_text(hjust = 0.5))
+
+plot(h)
+```
+<br><h4>**Boxplot of Selling Price by Seller Type**</h4>
+```{r}
+
+e <- ggplot(CarSales, aes(x = seller_type, y = selling_price)) +
+  geom_boxplot(fill = c("darkred", "darkblue", "yellow"), col = c("red", "blue", "brown")) +
+  scale_y_continuous(labels = comma_format(prefix = "\u20B9", scale = 1e-6, suffix = "M")) +
+  theme(axis.title.x = element_blank(), axis.title.y = element_text(size = 12)) +
+  labs(title = "Selling Price by Seller Type")
+plot(e)
+```
+
+
+<br><h4>**Scatterplot of Selling Price vs Year of Manufacture for Seller Type**</h4>
+```{r}
+ggplot(data = CarSales) +
+  geom_point(mapping = aes(x = year, y = selling_price, colour = seller_type)) +
+  scale_y_continuous(labels = comma_format(prefix = "\u20B9", scale = 1e-6, suffix = "M"))
+
+```
+<br><h4>**Boxplot of Selling Price by Transmission type and Fuel Type**</h4>
+```{r}
+
+e=ggplot(CarSales, aes(x = transmission, y = selling_price)) +
+  geom_boxplot(fill=c("darkred","darkblue"), col=c("red","black"))+
+  scale_y_continuous(labels = comma_format(prefix = "\u20B9", scale = 1e-6, suffix = "M"))
+
+h=ggplot(CarSales, aes(x = fuel, y = selling_price)) +
+  geom_boxplot(fill=c("pink","purple", "yellow", "green"))+
+  scale_y_continuous(labels = comma_format(prefix = "\u20B9", scale = 1e-6, suffix = "M"))
+
+plot_grid(e, h,labels = "AUTO")
+```
+
+```{r}
+ggplot(data = CarSales) +
+  geom_point(mapping = aes(x = engine, y = selling_price, colour = transmission)) +
+  scale_y_continuous(labels = comma_format(prefix = "\u20B9", scale = 1e-6, suffix = "M"))
+```
+
+```{r}
+ggplot(data = CarSales) +
+  geom_point(mapping = aes(x = max_power, y = selling_price, colour = transmission)) +
+  scale_y_continuous(labels = comma_format(prefix = "\u20B9", scale = 1e-6, suffix = "M"))
+```
+> Hypothesis test
+
+```{r}
+DealerC =filter(CarSales, seller_type=="Dealer")
+head(DealerC)
+summary(DealerC)
+```
+
+```{r}
+IndC =filter(CarSales, seller_type=="Individual")
+head(IndC)
+summary(IndC)
+```
+
+
+
+<h5>Consider the hypothesis as given below,
+
+<center><br>    ###Change Variables     
+Null Hypothesis(Ho) : $\sigma$ (PetrolC\$selling_price) = $\sigma$ (DieselC\$selling_price)<br>
+<br>Alternate Hypothesis(H1) : $\sigma$ (PetrolC\$selling_price) ≠ $\sigma$ (DieselC\$selling_price) </center></h5>
+
+```{r}
+var.test(IndC$selling_price, DealerC$selling_price, alternative = "two.sided")
+```
+
+><h5> 
+The variances are not equal because the p value is much lesser than significance level and the fvalue doesn't lie between f1 and f2, hence we reject the hypothesis. 
+</h5>
+
+<br><h4> **For unknown mean and unequal variances<br>**</h4>
+
+<h5>
+Consider the hypothesis as given below,
+ 
+<center><br>   ###Change Variable      Null Hypothesis(Ho) : $\mu$ (DieselC\$selling_price) - $\mu$ (PetrolC\$selling_price) = 0 <br>
+           <br> Alternate Hypothesis(H1) : $\mu$ (DieselC\$selling_price) - $\mu$ (PetrolC\$selling_price) ≠ 0<center></h5>
+
+```{r}
+t.test(IndC$selling_price, DealerC$selling_price, var.equal = FALSE, conf.level = 0.95, alternative= "two.sided")
+```
+       
+       
+       
+<br><h4><center>**LINEAR REGRESSION**</center></h4>
+  
+  
+```{r}
+summary(CarSales)
+
+i = sample(2,nrow(CarSales),replace =TRUE,prob =c(0.8,0.2))
+CarSalesTraining = CarSales[i==1,]
+CarSalesTest = CarSales[i==2,]
+
+```
+## We have constructed a simple linear regression of `selling_price` by `seller_type` using `carSalesTraining`. 
+
+```{r}
+numeric_training_data <- select_if(CarSalesTraining, is.numeric)
+numeric_testing_data <- select_if(CarSalesTest, is.numeric)
+```
+
+```{r}
+slr_sale <- lm(selling_price ~ max_power, data = numeric_training_data)
+summary(slr_sale)
+```
+```{r}
+mlr_sale <- lm(selling_price ~., data = numeric_training_data)
+summary(mlr_sale)
+```
+
+```{r}
+library(MASS)
+# Creating a null model 
+intercept_only <- lm(selling_price ~ 1, data=numeric_training_data)
+# Creating a full model
+all <- lm(selling_price~., data=numeric_training_data)
+forward <- stepAIC (intercept_only, direction='forward',scope = formula(all))
+
+# view results of forward stepwise regression
+forward$anova
+# view final model
+summary(forward)
+```
+
+```{r}
+ypredict_forward <- predict(object = forward, newdata = numeric_testing_data)
+MAE(numeric_testing_data$selling_price,ypredict_forward)
+MSE(numeric_testing_data$selling_price,ypredict_forward)
+```
+```{r}
+backward <- stepAIC(all, direction = 'backward')
+backward$anova
+summary(backward)
+```
+```{r}
+ypredict_bckwrd <- predict(object = backward, newdata = numeric_testing_data)
+MAE(numeric_testing_data$selling_price,ypredict_bckwrd)
+MSE(numeric_testing_data$selling_price,ypredict_bckwrd)
+```
